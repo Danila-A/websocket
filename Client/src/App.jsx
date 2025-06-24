@@ -1,11 +1,9 @@
 import { WebSocketApp } from "./components/WebSocketApp/WebSocketApp"
 
-function App() {
+export const App = () => {
   return (
     <div className="">
       <WebSocketApp />
     </div>
   );
 }
-
-export default App
