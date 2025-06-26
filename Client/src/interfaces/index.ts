@@ -6,3 +6,5 @@ export interface Message {
 }
 
 export type MessagesList = Message[];
+
+export type Listener = (data: any) => void;

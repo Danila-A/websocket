@@ -1,49 +1,29 @@
 import { useState, type FormEvent } from "react";
-import { useRef } from "react";
-import type { Message, MessagesList } from "../../interfaces";
+import type { Message } from "../../interfaces";
 import styles from './WebSocketApp.module.css';
+import { useGetMessagesQuery, useSendMessageMutation } from "../../store/Apis/messageApi";
 
 
 export const WebSocketApp = () => {
-    const [messages, setMessages] = useState<MessagesList | []>([]);
     const [value, setValue] = useState('');
-    const socket = useRef<WebSocket>(null);
     const [connected, setConnected] = useState(false);
     const [username, setUsername] = useState('');
+    const [sendMessage] = useSendMessageMutation();
+    const { data: messages } = useGetMessagesQuery();
 
     const connect = (event: FormEvent) => {
         event.preventDefault();
 
-        socket.current = new WebSocket('ws://localhost:5000');
-
-        socket.current.onopen = () => {
-            setConnected(true);
-            const message = {
-                event: 'connection',
-                username,
-                id: Date.now(),
-            }
-            socket.current && socket.current.send(JSON.stringify(message));
+        setConnected(true);
+        const message = {
+            event: 'connection',
+            username,
+            id: Date.now(),
         }
-
-        socket.current.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            setMessages((prev) => {
-                return [message, ...prev];
-            });
-        }
-
-        socket.current.onclose = () => {
-            console.log('The server is closed');
-            setConnected(false);
-        }
-
-        socket.current.onerror = () => {
-            console.log('An error has occurred');
-        }
+        sendMessage(message);
     }
 
-    const sendMessage = (event: FormEvent) => {
+    const handleSubmit = (event: FormEvent) => {
         event.preventDefault();
         const message: Message = {
             username,
@@ -51,7 +31,7 @@ export const WebSocketApp = () => {
             id: Date.now(),
             event: 'message',
         }
-        socket.current && socket.current.send(JSON.stringify(message));
+        sendMessage(message);
         setValue('');
     }
 
@@ -59,12 +39,14 @@ export const WebSocketApp = () => {
         return (
             <div className={styles.container}>
                 <div className={styles.formContainer}>
+                    <h3>Entry your name to get in the chat</h3>
                     <form onSubmit={(event) => connect(event)} className={styles.form}>
                         <input 
                         value={username} 
                         onChange={(event) => setUsername(event.target.value)}
                         type="text" 
-                        placeholder="Введите ваше имя" />
+                        placeholder="Введите ваше имя" 
+                        className={styles.input} />
                         <button className={styles.button}>Войти</button>
                     </form>
                 </div>
@@ -75,7 +57,8 @@ export const WebSocketApp = () => {
     return (
         <div className={styles.container}>
             <div className={styles.formContainer}>
-                <form onSubmit={(event) => sendMessage(event)} className={styles.form}>
+                <h2>Welcome!</h2>
+                <form onSubmit={(event) => handleSubmit(event)} className={styles.form}>
                     <input 
                     type="text" 
                     value={value} 
@@ -85,7 +68,7 @@ export const WebSocketApp = () => {
                 </form>
             </div>
             <div className={styles.messages}>
-                {messages.map((item) => (
+                {messages?.map((item) => (
                     <div key={item.id}>
                         {item.event === 'connection'
                             ? <div className={styles.connectionMessage}>Пользователь {item.username} подключился</div>
