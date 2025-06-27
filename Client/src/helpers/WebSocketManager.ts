@@ -3,29 +3,66 @@ import type { Message } from "../interfaces";
 class WebSocketManager {
     private socket: WebSocket | null = null;
     private url: string | null = null;
-    public connected: Promise<boolean> | null = null;
+    public connected: Promise<unknown> | null = null;
     private currentReconnectAttempt: number = 0;
     private maxReconnectAttempts: number = 3;
+    private reconnectDelay: number = 2000;
 
     constructor(url: string) {
-        this.socket = new WebSocket(url);
         this.url = url;
+        this.connect();
     }
 
-    connect() { 
-        this.connected = new Promise<boolean>((resolve, reject) => {
+    connect() {
+        if(!this.url) return;
+
+        this.socket = new WebSocket(this.url);
+        this.connected = this.widthTimeout(new Promise((resolve, reject) => {
             if (this.socket) {
                 this.socket.onopen = () =>  resolve(true);
-                this.socket.onerror = () => reject(false);
+                this.socket.onerror = (error) => reject(error);
             }
-        });
-        this.connected.catch(() => {
+        }), 5000)
+        .catch(() => {
             this.reconnect();
         });
     }
 
+    private widthTimeout<T>(promise: Promise<T>, timeout: number) {
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(false), timeout);
+            promise
+            .then(() => {
+                clearTimeout(timer);
+                this.currentReconnectAttempt = 0;
+                resolve(true);
+            })
+            .catch((error) => {
+                clearTimeout(timer);
+                reject(error);
+            })
+        })
+    }
+
+    reconnect() {
+        if (this.currentReconnectAttempt >= this.maxReconnectAttempts) {
+            console.log("We can't to connect to websocket");
+            return;
+        }
+
+        const delay = this.reconnectDelay * 2 ** this.currentReconnectAttempt;
+
+        this.currentReconnectAttempt++;
+        console.log(`Reconnecting in ${delay / 1000}s`);
+        this.connect();
+    }
+
     getConnected() {
         return this.connected;
+    }
+
+    send(message: Message) {
+        if (this.socket) this.socket.send(JSON.stringify(message));
     }
 
     addListener(event: string, listener: (data: any) => void) {
@@ -34,22 +71,6 @@ class WebSocketManager {
 
     removeListener(event: string, listener: (data: any) => void) {
         if (this.socket) this.socket.removeEventListener(event, listener);
-    }
-
-    reconnect() {
-        if (this.url && this.socket && (this.currentReconnectAttempt < this.maxReconnectAttempts)) {
-            this.currentReconnectAttempt++;
-            console.log('reconnecting...');
-            this.socket = new WebSocket(this.url);
-            this.connect();
-        } else {
-            console.log("We can't to connect to websocket");
-        }
-
-    }
-
-    send(message: Message) {
-        if (this.socket) this.socket.send(JSON.stringify(message));
     }
 }
 

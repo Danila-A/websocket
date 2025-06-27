@@ -21,7 +21,6 @@ export const messageApi = createApi({
             ) {
                 try {
                     await cacheDataLoaded;
-                    socket.connect();
                     await socket.getConnected();
 
                     const listener = (event: MessageEvent) => {
