@@ -1,15 +1,11 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import type { Message, MessagesList } from "../../interfaces";
 import { socket } from "../../helpers/WebSocketManager";
+import { fakeBaseQuery } from "@reduxjs/toolkit/query";
 
 export const messageApi = createApi({
     reducerPath: 'messageApi',
-    async baseQuery (data: Message) {
-        socket.connect;
-        await socket.getConnected();
-        socket.send(data);
-        return { data };
-    },
+    baseQuery: fakeBaseQuery(),
     endpoints: (build) => ({
         getMessages: build.query<MessagesList, void>({
             queryFn() {
@@ -21,7 +17,7 @@ export const messageApi = createApi({
             ) {
                 try {
                     await cacheDataLoaded;
-                    await socket.getConnected();
+                    await socket.getConnection();
 
                     const listener = (event: MessageEvent) => {
                         const data = JSON.parse(event.data);
@@ -40,9 +36,15 @@ export const messageApi = createApi({
             },
         }),
         sendMessage: build.mutation<Message, Message>({
-            query(event) {
-                return event;
-            }
+            queryFn: async (message) => {
+                try {
+                    await socket.getConnection();
+                    socket.send(message);
+                    return { data: message };
+                } catch (error) {
+                    return { error: { message: "WebSocket send failed" } };
+                }
+            },
         })
     }),
 });

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { Message } from "../../interfaces";
-import styles from './WebSocketApp.module.css';
+import styles from './WebSocketApp.module.scss';
 import { useGetMessagesQuery, useSendMessageMutation } from "../../store/Apis/messageApi";
 
 
